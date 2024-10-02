@@ -1,0 +1,22 @@
+{
+  "name": "mastering-rest-api",
+  "version": "1.0.0",
+  "description": "\"This is the RESTful APIs mastering project\"",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon server.ts"
+  },
+  "keywords": [
+    "RESTful",
+    "APIs",
+    "Express"
+  ],
+  "author": "Wajahat, <wajahat.uoh@hotmail.com>",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "nodemon": "^3.1.7",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.2"
+  }
+}
