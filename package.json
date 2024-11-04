@@ -4,7 +4,8 @@
   "description": "\"This is the RESTful APIs mastering project\"",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon server.ts"
+    "dev": "nodemon server.ts",
+    "start": "node server.ts"
   },
   "keywords": [
     "RESTful",
