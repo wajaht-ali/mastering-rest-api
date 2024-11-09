@@ -1,32 +1,43 @@
 {
-  "name": "rest-apis",
+  "name": "mastering-rest-api",
   "version": "1.0.0",
-  "description": "This is mastering rest apis session.",
-  "type":"module",
+  "description": "\"This is the RESTful APIs mastering project\"",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.ts",
+    "start": "node server.ts"
   },
   "keywords": [
-    "expressjs",
-    "rest",
-    "apis"
+    "RESTful",
+    "APIs",
+    "Express"
   ],
-  "author": "Wajahat A <wajahat.uoh@hotmail.com>",
+  "author": "Wajahat, <wajahat.uoh@hotmail.com>",
   "license": "ISC",
-  "dependencies": {
-    "@types/node": "^22.5.3",
-    "express": "^4.19.2",
-    "nodemon": "^3.1.4",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.5.4"
-  },
   "devDependencies": {
-    "@eslint/js": "^9.9.1",
-    "@types/express": "^4.17.21",
-    "eslint": "^9.9.1",
-    "globals": "^15.9.0",
-    "typescript-eslint": "^8.4.0"
+    "@eslint/js": "^9.11.1",
+    "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.17",
+    "@types/dotenv": "^6.1.1",
+    "@types/express": "^5.0.0",
+    "@types/http-errors": "^2.0.4",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/mongoose": "^5.11.96",
+    "@types/node": "^22.7.4",
+    "eslint": "^9.11.1",
+    "globals": "^15.10.0",
+    "nodemon": "^3.1.7",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.2",
+    "typescript-eslint": "^8.8.0"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "http-errors": "^2.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.7.0"
   }
 }
