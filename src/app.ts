@@ -1,8 +1,8 @@
 import express from "express";
 import globalErrorhandler from './middlewares/globalErrorHandler';
-// import createHttpError from "http-errors";
 import userRouter from "./routes/userRouter";
-import cors from 'cors';
+import cors from "cors";
+import { upload } from "./services/multer";
 
 const app = express();
 
@@ -13,6 +13,7 @@ app.use(cors({
     credentials: true
 }));
 
+
 // json data configuration
 app.use(express.json());
 
@@ -20,7 +21,7 @@ app.get("/", (req, res) => {
     res.status(200).send({message: "Server is running!"});
 })
 
-app.use('/api/v1/users', userRouter);
+app.use('/api/v1/users', upload.single("Picture"), userRouter);
 
 // global error handler
 app.use(globalErrorhandler);

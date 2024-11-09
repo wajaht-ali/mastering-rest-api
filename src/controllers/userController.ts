@@ -79,3 +79,18 @@ export const loginUserController = async (req: Request, res: Response, next: Nex
         return next(createHttpError(400, `Error with user login ${error}`));
     }
 }
+
+export const uploadDataController = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const {name, age} = req.body;
+        if(!name || !age) {
+            return next(createHttpError(400, "All fields are required!"));
+        }
+        console.log("Name: ", name);
+        console.log("Age: ", age);
+        const file = req.file;
+        console.log("File: ", file);
+    } catch (error) {
+        next(createHttpError(400, `Error with uploading data ${error}`));
+    }
+}
