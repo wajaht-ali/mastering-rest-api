@@ -4,6 +4,8 @@ import UserModel from "../modals/userModal";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { config } from "../config/config";
+import cloudinary from "../config/cloudinary";
+import fs from "fs";
 
 export const registerUserController = async (
     req: Request,
@@ -82,14 +84,25 @@ export const loginUserController = async (req: Request, res: Response, next: Nex
 
 export const uploadDataController = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const {name, age} = req.body;
-        if(!name || !age) {
-            return next(createHttpError(400, "All fields are required!"));
-        }
-        console.log("Name: ", name);
-        console.log("Age: ", age);
         const file = req.file;
-        console.log("File: ", file);
+        // Upload the file to cloudinary
+        let img;
+        if (file && file.path) {
+            img = await cloudinary.uploader.upload(file.path, (err) => {
+                if (err) {
+                    console.log("Error: ", err);
+                    return next(createHttpError(400, `Error with uploading data ${err}`));
+                }
+            });
+            // Delete the file from the server
+        fs.unlinkSync(file.path);
+        
+        res.status(200).send({
+            success: true,
+            message: "File uploaded successfully!",
+            file: img
+        });
+    }
     } catch (error) {
         next(createHttpError(400, `Error with uploading data ${error}`));
     }
