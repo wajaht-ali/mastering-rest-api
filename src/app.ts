@@ -22,6 +22,7 @@ app.get("/", (req, res) => {
 })
 
 app.use('/api/v1/users', upload.single("Picture"), userRouter);
+app.use('/api/v1/usersMulData', upload.array("Images"), userRouter);
 
 // global error handler
 app.use(globalErrorhandler);

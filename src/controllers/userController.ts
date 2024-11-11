@@ -101,9 +101,42 @@ export const uploadDataController = async (req: Request, res: Response, next: Ne
             success: true,
             message: "File uploaded successfully!",
             file: img
-        });
+        })
     }
     } catch (error) {
         next(createHttpError(400, `Error with uploading data ${error}`));
     }
 }
+
+export const uploadMultipleDataController = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const files = req.files as Express.Multer.File[];
+        const imgUrl: string[] = [];
+
+        if (files && files.length > 0) {
+            for (const file of files) {                
+                try {
+                    // Upload the file to Cloudinary
+                    const result = await cloudinary.uploader.upload(file.path, {
+                        folder: "Cover-Images",
+                    });
+                    imgUrl.push(result.secure_url);
+                    
+                    // Delete the file from the server
+                    fs.unlinkSync(file.path);
+                } catch (err) {
+                    console.error("Cloudinary upload error:", err);
+                    return next(createHttpError(400, `Error uploading file to Cloudinary: ${err}`));
+                }
+            }
+        }
+
+        res.status(200).send({
+            success: true,
+            message: "Files uploaded successfully!",
+            files: imgUrl
+        });
+    } catch (error) {
+        next(createHttpError(400, `Error handling upload: ${error}`));
+    }
+};
