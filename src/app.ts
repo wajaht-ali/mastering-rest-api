@@ -19,9 +19,9 @@ app.use(express.json());
 
 app.get("/", (req, res) => {
     res.status(200).send({message: "Server is running!"});
-})
+});
 
-app.use('/api/v1/users', upload.single("Picture"), userRouter);
+app.use('/api/v1/users', upload.single("photo"), userRouter);
 app.use('/api/v1/usersMulData', upload.array("Images"), userRouter);
 
 // global error handler

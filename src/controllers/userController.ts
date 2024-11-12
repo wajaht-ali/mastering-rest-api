@@ -14,10 +14,45 @@ export const registerUserController = async (
 ) => {
     try {
         // validation
-        const { name, email, password } = req.body;
-        if (!name || !email || !password) {
+        const { name, email, password, phone_no, gender, address  } = req.body;
+        const photo = req.file;
+
+        // for postman string to object conversion
+        if (typeof req.body.address === 'string') {
+            req.body.address = JSON.parse(req.body.address);
+          }
+        if (!name || !email || !password || !phone_no || !gender || !photo || !address) {
             const error = createHttpError(400, "All fields are required");
             return next(error);
+        }
+        // switch(true) {
+        //     case !name: 
+        //         return next(createHttpError(400, "Name is required!"));
+        //         break;
+        //     case !email:
+        //         return next(createHttpError(400, "Email is required!"));
+        //         break;
+        //     case !password:
+        //         return next(createHttpError(400, "Password is required!"));
+        //         break;
+        //     case !phone_no:
+        //         return next(createHttpError(400, "Phone number is required!"));
+        //         break;
+        //     case !gender:
+        //         return next(createHttpError(400, "Gender is required!"));
+        //         break;
+        //     case !address:
+        //         return next(createHttpError(400, "Address is required!"));
+        //         break;
+        //     case !photo:
+        //         return next(createHttpError(400, "Photo is required!"));
+        //         break;
+        //     default:
+        //         break;
+        // }
+        const { street, city, state, postalCode, country } = req.body.address;
+        if (!street || !city || !state || !postalCode || !country) {
+            return next(createHttpError(400, "Complete address details are required!"));
         }
 
         // database call
@@ -29,11 +64,29 @@ export const registerUserController = async (
         // password hashing
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // upload photo to cloudinary
+        let img;
+        if(photo && photo.path) {
+            img = await cloudinary.uploader.upload(photo.path, {
+                folder: "Profile-Images"
+            });
+        }
+        fs.unlinkSync(photo.path);
         // process
         const newUser = await UserModel.create({
             name,
             email,
             password: hashedPassword,
+            gender,
+            phone_no,
+            address: {
+                street,
+                city,
+                state,
+                postalCode,
+                country,
+            },
+            photo: img?.secure_url || null,
         });
 
         // response
@@ -114,7 +167,7 @@ export const uploadMultipleDataController = async (req: Request, res: Response, 
         const imgUrl: string[] = [];
 
         if (files && files.length > 0) {
-            for (const file of files) {                
+            for (const file of files) {
                 try {
                     // Upload the file to Cloudinary
                     const result = await cloudinary.uploader.upload(file.path, {

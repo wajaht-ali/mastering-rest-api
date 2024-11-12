@@ -1,5 +1,14 @@
 import mongoose from "mongoose";
-import {User} from "../Types/userTypes";
+import {Address, Gender, Role, User} from "../Types/userTypes";
+
+// address schema
+const AddressSchema = new mongoose.Schema<Address>({
+    street: { type: String, required: true },
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    postalCode: { type: String, required: true , default: "44000"},
+    country: { type: String, required: true, default: "Pakistan" },
+  });
 
 const UserSchema = new mongoose.Schema<User>({
     name: {
@@ -14,9 +23,31 @@ const UserSchema = new mongoose.Schema<User>({
     password: {
         type: String,
         required: true
+    },
+    role: {
+        type: String,
+        enum: Object.values(Role),
+        default: Role.User
+    },
+    phone_no: {
+        type: Number,
+        required: true
+    },
+    gender: {
+        type: String,
+        enum: Object.values(Gender),
+        required: true,
+        default: Gender.Male
+    },
+    address: {
+        type: AddressSchema,
+        required: true
+    },
+    photo: {
+        type: String,
+        required: true
     }
 }, {timestamps: true});
-
 
 const UserModel = mongoose.model<User>("users", UserSchema);
 export default UserModel;
