@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 import { config } from "../config/config";
 import cloudinary from "../config/cloudinary";
 import fs from "fs";
+import nodemailer from "nodemailer";
 
 // user signup
 export const registerUserController = async (
@@ -175,6 +176,60 @@ export const deleteUserController = async (req: Request, res: Response, next: Ne
         });
     } catch (error) {
         return next(createHttpError(400, "false", `Error with deleting user ${error}`));
+    }
+}
+// reset-password
+export const forgotPasswordController = async(req: Request, res: Response, next: NextFunction) => {
+    try {
+        const {email} = req.body;
+        if(!email) {
+            return next(createHttpError(400,"false", "Email is required!"));
+        }
+        const user = await UserModel.findOne({email});
+        if(!user) {
+            return next(createHttpError(404,"false", "User not found!"));
+        }
+        // Generate a unique token
+        const resetToken = jwt.sign({ userId: user._id }, config.jwtSecret as string, { expiresIn: '1h' });
+
+        // Configure Nodemailer
+        const transporter = nodemailer.createTransport({
+        host: `${config.EMAIL_HOST}`,
+        port: 465,
+        secure: true, // Use TLS
+        auth: {
+            user: `${config.My_Email}`,
+            pass: `${config.My_Email_Password}`,
+        },
+        });
+        // // Save the reset token to the database
+        // user.resetToken = resetToken;
+        // await user.save();
+
+        // Send reset email
+        const mailOptions = {
+            from: `${config.My_Email}`,
+            to: user.email,
+            subject: 'Password Reset Request',
+            html: `
+            <h4>Dear ${user.name},</h4> <br>
+        <p>You have requested to reset your password.</p>
+        <p>Please click on the following button to reset your password.</p>
+        <a style="padding: 8px; background-color: blue; color: white; cursor: pointer; text-decoration: none; border-radius: 4px;" href="http://localhost:3000/reset-password/${resetToken}">Reset Password</a>
+        <br>
+        <br>
+        <p>If the button don't work properly, please copy the below link and paste it in your browser.</p>
+        <a style="color: blue;" href="http://localhost:3000/reset-password/${resetToken}">http://localhost:3000/reset-password/${resetToken}</a>
+      `,
+    };
+    // Send the email
+    await transporter.sendMail(mailOptions);
+    res.status(200).send({
+        success: true,
+        message: 'Password reset link sent to your email!',
+    });
+    } catch (error) {
+        return next(createHttpError(400,"false", `Error with resetting password ${error}`));
     }
 }
 // upload media
