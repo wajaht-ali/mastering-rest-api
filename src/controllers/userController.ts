@@ -113,10 +113,68 @@ export const loginUserController = async (req: Request, res: Response, next: Nex
 // update user
 export const updateUserController = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const {name, email, password, phone_no, gender, address, photo} = req.body;
+        const {name, email, password, phone_no, gender, address} = req.body;
         const userId = req.params.id;
+        const photo = req.file;
+
+        const existingUser = await UserModel.findById(userId);
+        if(!existingUser) {
+            return next(createHttpError(404,"false", "User not found!"));
+        }
+
+        // for postman string to object conversion
+        const parsedAddress = typeof address === 'string' ? JSON.parse(address) : address;
+
+        // Generate salt before hashing
+        const hashedPassword = password ? await bcrypt.hash(password, 10) : existingUser.password;
+        
+        let image;
+        if(photo && photo.path) {
+            image = await cloudinary.uploader.upload(photo.path, {
+                folder: "Profile-Images"
+            });
+            fs.unlinkSync(photo.path);
+        }
+        const updatedUser = await UserModel.findByIdAndUpdate(userId, {
+            name: name || existingUser.name,
+            email: email || existingUser.email,
+            password: hashedPassword,
+            phone_no: phone_no || existingUser.phone_no,
+            gender: gender || existingUser.gender,
+            address: {
+                street: parsedAddress?.street || existingUser.address.street,
+                city: parsedAddress?.city || existingUser.address.city,
+                state: parsedAddress?.state || existingUser.address.state,
+                postalCode: parsedAddress?.postalCode || existingUser.address.postalCode,
+                country: parsedAddress?.country || existingUser.address.country,
+            },
+            photo: image?.secure_url || existingUser.photo,
+         }, {new: true});
+
+        res.status(200).send({
+            success: true,
+            message: "User updated successfully!",
+            user: updatedUser
+        });
     } catch (error) {
         return next(createHttpError(400,"false", `Error with updating user ${error}`));
+    }
+}
+// delete user
+export const deleteUserController = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.params.id;
+        const user = await UserModel.findByIdAndDelete(userId);
+        if(!user) {
+            return next(createHttpError(404,"false", "User not found!"));
+        }
+        res.status(200).send({
+            success: true,
+            message: "User deleted successfully!",
+            user
+        });
+    } catch (error) {
+        return next(createHttpError(400, "false", `Error with deleting user ${error}`));
     }
 }
 // upload media
