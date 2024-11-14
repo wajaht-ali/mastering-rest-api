@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import {Address, Gender, Role, User} from "../Types/userTypes";
+import {Address, Gender, Role, User, OTP} from "../Types/userTypes";
 
 // address schema
 const AddressSchema = new mongoose.Schema<Address>({
@@ -9,6 +9,17 @@ const AddressSchema = new mongoose.Schema<Address>({
     postalCode: { type: String, required: true , default: "44000"},
     country: { type: String, required: true, default: "Pakistan" },
   });
+
+const otpSchema = new mongoose.Schema<OTP>({
+    otpNumber: {
+        type: Number,
+        default: undefined
+    },
+    expiresIn: {
+        type: Number,
+        default: undefined
+    }
+});
 
 const UserSchema = new mongoose.Schema<User>({
     name: {
@@ -46,6 +57,9 @@ const UserSchema = new mongoose.Schema<User>({
     photo: {
         type: String,
         required: true
+    },
+    otp: {
+        type: otpSchema,
     }
 }, {timestamps: true});
 

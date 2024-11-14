@@ -8,6 +8,10 @@ export enum Gender {
     Female = "female",
     Other = "other",
 };
+export interface OTP {
+    otpNumber: number | undefined,
+    expiresIn: number | undefined
+}
 
 export interface User {
     _id: string,
@@ -19,6 +23,7 @@ export interface User {
     gender: Gender,
     address: Address
     photo: string,
+    otp: OTP
 };
 
 

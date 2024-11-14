@@ -7,6 +7,7 @@ import { config } from "../config/config";
 import cloudinary from "../config/cloudinary";
 import fs from "fs";
 import nodemailer from "nodemailer";
+import crypto from "crypto";
 
 // user signup
 export const registerUserController = async (
@@ -178,7 +179,7 @@ export const deleteUserController = async (req: Request, res: Response, next: Ne
         return next(createHttpError(400, "false", `Error with deleting user ${error}`));
     }
 }
-// reset-password
+// forgot-password
 export const forgotPasswordController = async(req: Request, res: Response, next: NextFunction) => {
     try {
         const {email} = req.body;
@@ -189,9 +190,13 @@ export const forgotPasswordController = async(req: Request, res: Response, next:
         if(!user) {
             return next(createHttpError(404,"false", "User not found!"));
         }
-        // Generate a unique token
-        const resetToken = jwt.sign({ userId: user._id }, config.jwtSecret as string, { expiresIn: '1h' });
-
+        // Generate a random OTP
+        const otp = crypto.randomInt(100000, 999999);
+        user.otp = {
+            otpNumber: otp,
+            expiresIn: Date.now() + 90 * 1000,
+        }
+        await user.save();
         // Configure Nodemailer
         const transporter = nodemailer.createTransport({
         host: `${config.EMAIL_HOST}`,
@@ -214,12 +219,14 @@ export const forgotPasswordController = async(req: Request, res: Response, next:
             html: `
             <h4>Dear ${user.name},</h4> <br>
         <p>You have requested to reset your password.</p>
-        <p>Please click on the following button to reset your password.</p>
-        <a style="padding: 8px; background-color: blue; color: white; cursor: pointer; text-decoration: none; border-radius: 4px;" href="http://localhost:3000/reset-password/${resetToken}">Reset Password</a>
+        <p>Please copy and then paste the following OTP pin in forgot password field.</p>
+        <div style="width: full; display: flex; justify-items: center; align-items: center;">
+            <p style="padding: 8px; background-color: #DFF2EB; color: #3C3D37; text-decoration: none; border-radius: 4px;">${otp}</p>
+        </div>
         <br>
         <br>
-        <p>If the button don't work properly, please copy the below link and paste it in your browser.</p>
-        <a style="color: blue;" href="http://localhost:3000/reset-password/${resetToken}">http://localhost:3000/reset-password/${resetToken}</a>
+        <p>Please do not share this OTP with anyone. This OTP will automatically expire in next 90 seconds.</p>
+        <a style="color: blue;" href="http://localhost:3000/reset-password/${otp}">http://localhost:3000/reset-password/${otp}</a>
       `,
     };
     // Send the email
@@ -232,6 +239,76 @@ export const forgotPasswordController = async(req: Request, res: Response, next:
         return next(createHttpError(400,"false", `Error with resetting password ${error}`));
     }
 }
+// resend otp, if expired
+export const resendOtpController = async (req: Request, res: Response, next: NextFunction) => {
+    const { email } = req.body;
+  
+    // Find the user by email
+    const user = await UserModel.findOne({ email });
+    if (!user) {
+        return next(createHttpError(404, "false", "User not found!"));
+    };
+  
+    // Check if the existing OTP is still valid
+    if (user.otp.expiresIn && Date.now() < user.otp?.expiresIn) {
+      return next(createHttpError(400, "false", 'Your OTP is still valid and has not expired yet.'));
+    }
+  
+    // Generate a new OTP
+    const otp = crypto.randomInt(100000, 999999);
+        user.otp = {
+            otpNumber: otp,
+            expiresIn: Date.now() + 90 * 1000,
+        }
+        await user.save();
+
+  
+    // Configure Nodemailer
+    const transporter = nodemailer.createTransport({
+        host: `${config.EMAIL_HOST}`,
+        port: 465,
+        secure: true, // Use TLS
+        auth: {
+            user: `${config.My_Email}`,
+            pass: `${config.My_Email_Password}`,
+        },
+        });
+  
+        // Send reset email
+        const mailOptions = {
+            from: `${config.My_Email}`,
+            to: user.email,
+            subject: 'Password Reset Request',
+            html: `
+            <h4>Dear ${user.name},</h4> <br>
+        <p>You have requested to reset your password.</p>
+        <p>Please copy and then paste the following OTP pin in forgot password field.</p>
+        <div style="width: full; display: flex; justify-items: center; align-items: center;">
+            <p style="padding: 8px; background-color: #DFF2EB; color: #3C3D37; text-decoration: none; border-radius: 4px;">${otp}</p>
+        </div>
+        <br>
+        <br>
+        <p>Please do not share this OTP with anyone. This OTP will automatically expire in next 90 seconds.</p>
+        <a style="color: blue;" href="http://localhost:3000/reset-password/${otp}">http://localhost:3000/reset-password/${otp}</a>
+        `,    
+    };
+    // Send the email
+    await transporter.sendMail(mailOptions);
+    res.status(200).send({
+        success: true,
+        message: 'Password reset link sent to your email!',
+    });
+}
+
+// reset password
+// export const resetPasswordController = async (req: Request, res: Response, next: NextFunction) => {
+//     try {
+//         const {email, otp, password} = req.body;
+//     } catch (error) {
+//         return next(createHttpError(400,"false", `Error with resetting password ${error}`));
+//     }
+// }
+
 // upload media
 export const uploadDataController = async (req: Request, res: Response, next: NextFunction) => {
     try {
