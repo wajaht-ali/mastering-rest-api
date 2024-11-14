@@ -241,7 +241,8 @@ export const forgotPasswordController = async(req: Request, res: Response, next:
 }
 // resend otp, if expired
 export const resendOtpController = async (req: Request, res: Response, next: NextFunction) => {
-    const { email } = req.body;
+    try {
+        const { email } = req.body;
   
     // Find the user by email
     const user = await UserModel.findOne({ email });
@@ -298,16 +299,74 @@ export const resendOtpController = async (req: Request, res: Response, next: Nex
         success: true,
         message: 'Password reset link sent to your email!',
     });
+    } catch (error) {
+        return next(createHttpError(400,"false", `Error with resending OTP ${error}`));
+    }
 }
 
-// reset password
-// export const resetPasswordController = async (req: Request, res: Response, next: NextFunction) => {
-//     try {
-//         const {email, otp, password} = req.body;
-//     } catch (error) {
-//         return next(createHttpError(400,"false", `Error with resetting password ${error}`));
-//     }
-// }
+
+// Verify OTP and generate temporary token for password reset
+export const verifyOtpController = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { email, otp } = req.body;
+  
+    const user = await UserModel.findOne({ email });
+    if (!user) {
+        return next(createHttpError(404, "false", 'User not found'));
+    }
+  
+    if (user.otp.otpNumber !== parseInt(otp)) {
+        return next(createHttpError(400, "false", 'Invalid OTP'));
+    }
+    if (user.otp.expiresIn && Date.now() > user.otp.expiresIn) {
+        return next(createHttpError(400, "false", 'OTP has expired'));
+    }
+  
+    const resetToken = jwt.sign({ email: user.email }, config.jwt_password_reset as string, { expiresIn: '15m' });
+  
+    user.otp.otpNumber = undefined;
+    user.otp.expiresIn = undefined;
+    await user.save();
+  
+    res.status(200).json({ message: 'OTP verified', token: resetToken });
+    } catch (error) {
+        return next(createHttpError(400, "false", `Error with verifying OTP ${error}`));
+    }
+};
+
+// Reset password
+export const resetPasswordController = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+    const { token, password, cpassword } = req.body;
+    
+    if (password !== cpassword) {
+        return next(createHttpError(400, "false", 'Passwords do not match'));
+    }
+    const resetToken = jwt.verify(token, config.jwt_password_reset as string) as { email: string };
+    if (!resetToken) {
+        return next(createHttpError(400, "false", 'Invalid or expired token'));
+    }
+    console.log(resetToken);
+    console.log(resetToken.email);
+
+    const user = await UserModel.findOne({ email: resetToken.email });
+    if (!user) {
+        return next(createHttpError(404, "false", 'User not found'));
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword; 
+
+    await user.save();
+
+    console.log('New password has been set', user.password);
+    res.status(200).send({success: true, message: 'Password reset successful' });
+
+    } catch (error) {
+        console.error('JWT Error:', error);
+        return next(createHttpError(400, "false", `Error with resetting password ${error}`));
+    }
+  };
 
 // upload media
 export const uploadDataController = async (req: Request, res: Response, next: NextFunction) => {
