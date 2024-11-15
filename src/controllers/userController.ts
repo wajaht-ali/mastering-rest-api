@@ -6,8 +6,8 @@ import jwt from "jsonwebtoken";
 import { config } from "../config/config";
 import cloudinary from "../config/cloudinary";
 import fs from "fs";
-import nodemailer from "nodemailer";
 import crypto from "crypto";
+import { sendMail, transporter } from "../services/nodemailer";
 
 // user signup
 export const registerUserController = async (
@@ -48,8 +48,13 @@ export const registerUserController = async (
             img = await cloudinary.uploader.upload(photo.path, {
                 folder: "Profile-Images"
             });
+            fs.unlink(photo.path, (err) => {
+                if(err) {
+                    return next(createHttpError(400,"false", `Error with file deletion ${err}`));
+                }
+            });
         }
-        fs.unlinkSync(photo.path);
+        
         // process
         const newUser = await UserModel.create({
             name,
@@ -73,10 +78,24 @@ export const registerUserController = async (
             msg: "Sign up successfully!",
             user: newUser,
         });
+        // const html = `
+        // <h4>Dear ${newUser.name},</h4> 
+        // <br>
+        // <p>Welcome to <span style="color: #FF385C;">BookIt</span>, we are glad to have you on board!</p>
+        // <p>Thank you for signing up with us. We are excited to have you as a part of our community.</p>
+        // <p>Feel free to explore our platform and let us know if you have any questions.</p> 
+        // <br>
+        // <p>Best wishes</p>
+        // <p>Support Team</p>
+        // <p style="color: #FF385C; font-weight: bold; font-size: 25px;">BookIt</p>
+        // `;
+
+        // await sendMail(newUser.email, "Welcome to the BookIT 🥳", html);
     } catch (error) {
         return next(createHttpError(400,"false", `Error with user sign up ${error}`));
     }
 };
+
 //user login
 export const loginUserController = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -112,6 +131,7 @@ export const loginUserController = async (req: Request, res: Response, next: Nex
         return next(createHttpError(400, "false", `Error with user login ${error}`));
     }
 }
+
 // update user
 export const updateUserController = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -162,6 +182,7 @@ export const updateUserController = async (req: Request, res: Response, next: Ne
         return next(createHttpError(400,"false", `Error with updating user ${error}`));
     }
 }
+
 // delete user
 export const deleteUserController = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -179,6 +200,7 @@ export const deleteUserController = async (req: Request, res: Response, next: Ne
         return next(createHttpError(400, "false", `Error with deleting user ${error}`));
     }
 }
+
 // forgot-password
 export const forgotPasswordController = async(req: Request, res: Response, next: NextFunction) => {
     try {
@@ -190,47 +212,28 @@ export const forgotPasswordController = async(req: Request, res: Response, next:
         if(!user) {
             return next(createHttpError(404,"false", "User not found!"));
         }
-        // Generate a random OTP
+
         const otp = crypto.randomInt(100000, 999999);
         user.otp = {
             otpNumber: otp,
             expiresIn: Date.now() + 90 * 1000,
         }
         await user.save();
-        // Configure Nodemailer
-        const transporter = nodemailer.createTransport({
-        host: `${config.EMAIL_HOST}`,
-        port: 465,
-        secure: true, // Use TLS
-        auth: {
-            user: `${config.My_Email}`,
-            pass: `${config.My_Email_Password}`,
-        },
-        });
-        // // Save the reset token to the database
-        // user.resetToken = resetToken;
-        // await user.save();
-
-        // Send reset email
-        const mailOptions = {
-            from: `${config.My_Email}`,
-            to: user.email,
-            subject: 'Password Reset Request',
-            html: `
-            <h4>Dear ${user.name},</h4> <br>
+    
+    // send mail
+    const html = `
+        <h4>Dear ${user.name},</h4> <br>
         <p>You have requested to reset your password.</p>
         <p>Please copy and then paste the following OTP pin in forgot password field.</p>
         <div style="width: full; display: flex; justify-items: center; align-items: center;">
-            <p style="padding: 8px; background-color: #DFF2EB; color: #3C3D37; text-decoration: none; border-radius: 4px;">${otp}</p>
+        <p style="padding: 8px; background-color: #DFF2EB; color: #3C3D37; text-decoration: none; border-radius: 4px;">${otp}</p>
         </div>
         <br>
         <br>
         <p>Please do not share this OTP with anyone. This OTP will automatically expire in next 90 seconds.</p>
-        <a style="color: blue;" href="http://localhost:3000/reset-password/${otp}">http://localhost:3000/reset-password/${otp}</a>
-      `,
-    };
-    // Send the email
-    await transporter.sendMail(mailOptions);
+        <a style="color: blue;" href="http://localhost:3000/reset-password/${otp}">http://localhost:3000/reset-password/${otp}</a>`;
+
+    await sendMail(user.email, "Password Reset Request", html);
     res.status(200).send({
         success: true,
         message: 'Password reset link sent to your email!',
@@ -239,6 +242,7 @@ export const forgotPasswordController = async(req: Request, res: Response, next:
         return next(createHttpError(400,"false", `Error with resetting password ${error}`));
     }
 }
+
 // resend otp, if expired
 export const resendOtpController = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -262,18 +266,6 @@ export const resendOtpController = async (req: Request, res: Response, next: Nex
             expiresIn: Date.now() + 90 * 1000,
         }
         await user.save();
-
-  
-    // Configure Nodemailer
-    const transporter = nodemailer.createTransport({
-        host: `${config.EMAIL_HOST}`,
-        port: 465,
-        secure: true, // Use TLS
-        auth: {
-            user: `${config.My_Email}`,
-            pass: `${config.My_Email_Password}`,
-        },
-        });
   
         // Send reset email
         const mailOptions = {
@@ -303,7 +295,6 @@ export const resendOtpController = async (req: Request, res: Response, next: Nex
         return next(createHttpError(400,"false", `Error with resending OTP ${error}`));
     }
 }
-
 
 // Verify OTP and generate temporary token for password reset
 export const verifyOtpController = async (req: Request, res: Response, next: NextFunction) => {
@@ -346,20 +337,14 @@ export const resetPasswordController = async (req: Request, res: Response, next:
     if (!resetToken) {
         return next(createHttpError(400, "false", 'Invalid or expired token'));
     }
-    console.log(resetToken);
-    console.log(resetToken.email);
 
     const user = await UserModel.findOne({ email: resetToken.email });
     if (!user) {
         return next(createHttpError(404, "false", 'User not found'));
     }
-
     const hashedPassword = await bcrypt.hash(password, 10);
     user.password = hashedPassword; 
-
     await user.save();
-
-    console.log('New password has been set', user.password);
     res.status(200).send({success: true, message: 'Password reset successful' });
 
     } catch (error) {
@@ -377,7 +362,6 @@ export const uploadDataController = async (req: Request, res: Response, next: Ne
         if (file && file.path) {
             img = await cloudinary.uploader.upload(file.path, (err) => {
                 if (err) {
-                    console.log("Error: ", err);
                     return next(createHttpError(400,"false", `Error with uploading data ${err}`));
                 }
             });
@@ -412,7 +396,6 @@ export const uploadMultipleDataController = async (req: Request, res: Response, 
                     // Delete the file from the server
                     fs.unlinkSync(file.path);
                 } catch (err) {
-                    console.error("Cloudinary upload error:", err);
                     return next(createHttpError(400, "false", `Error uploading file to Cloudinary: ${err}`));
                 }
             }
